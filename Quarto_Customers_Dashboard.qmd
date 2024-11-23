@@ -1,0 +1,290 @@
+---
+title: "Zákaznícky dashboard"
+format:
+  dashboard:
+      logo: data/static/cleandata_logo.png
+      include-in-header:
+        text: |
+          <link rel="icon" type="image/x-icon" href="data/static/dashboard.ico">
+          <link href='https://fonts.googleapis.com/css?family=Maven Pro' rel='stylesheet'>
+---
+
+```{r, load-packages}
+#| label: load-packages
+#| echo: false
+#| eval: true
+#| warning: false
+#| output: false
+
+# Load necessary libraries
+library(leaflet)
+library(crosstalk)
+library(DT)
+library(dplyr)
+library(stringr)
+library(sf)
+library(lubridate)
+library(htmlwidgets)
+library(htmltools)
+library(janitor)
+library(purrr)
+library(summarywidget)
+```
+
+```{r, prep-data}
+#| label: prep-data
+#| echo: false
+#| eval: true
+#| warning: false
+#| output: false
+
+twelve_months_ago <- today() %m-% months(12)
+
+# Load Czech districts shapefile
+slovak_districts <- read_sf("data/districts/lau1-current-iz-shp.shp") |>
+  filter(str_detect(tolower(LAU), "sk")) |>
+  clean_names() |>
+  mutate(
+    long = unlist(map(st_centroid(geometry), 1)),
+    lat = unlist(map(st_centroid(geometry), 2))
+  )
+
+# Assign specialists to districts
+set.seed(123)
+slovak_districts <- slovak_districts |>
+  mutate(
+    specialist = case_when(
+      substr(lau, 4, 4) == "1" ~ "Miloš",
+      substr(lau, 4, 4) == "2" ~ "Jana",
+      substr(lau, 4, 4) == "3" ~ "Jan",
+      substr(lau, 4, 4) == "4" ~ "Lenka",
+      TRUE ~ NA_character_ # Default case if no match
+    ),
+    label = paste0("Okres: ", slovak_districts$name, "; ", "Obchodník: ", slovak_districts$specialist)
+  )
+
+specialists <- unique(slovak_districts$specialist)
+
+# Color palettes
+pal_specialist <- colorFactor("Set1", slovak_districts$specialist)
+
+# Create dummy customers
+customer_list <- list()
+set.seed(1)
+for (spec in specialists) {
+  districts_spec <- slovak_districts |> filter(specialist == spec)
+
+  # For each district assigned to the specialist
+  for (i in seq_len(nrow(districts_spec))) {
+    district <- districts_spec[i, ]
+    district_code <- district$lau
+
+    # Generate a set number of customers per district, say 2 customers per district
+    num_customers <- 3
+    points <- st_sample(district$geometry, num_customers)
+
+    # Convert to data frame
+    coords <- st_coordinates(st_centroid(points))
+
+    # Create customer types
+    customer_types <- c("interný", "akvírovaný", "prospekt")
+
+    # Randomly assign customer types
+    cust_types <- sample(customer_types, num_customers, replace = TRUE)
+
+    # Generate first order dates within last 24 months
+    first_order_dates <- sample(seq(as.Date("2022-10-01"), as.Date("2024-10-01"), by = "day"), num_customers, replace = TRUE)
+
+    # Generate sales amounts
+    sales_amounts <- runif(num_customers, min = 1000, max = 10000)
+
+    customers_spec <- data.frame(
+      customer_id = paste0(district_code, 
+                           sprintf("%08d", 
+                                   sample(1e7:1e8 - 1, 
+                                          num_customers, 
+                                          replace = FALSE)
+                                   )
+                           ),
+      specialist = spec,
+      district = district_code,
+      customer_type = cust_types,
+      first_order_date = first_order_dates,
+      sales_amount = sales_amounts,
+      lat = coords[, 2],
+      lng = coords[, 1],
+      stringsAsFactors = FALSE
+    )
+
+    customer_list[[paste0(spec, "_", district_code)]] <- customers_spec
+  }
+}
+
+customers <- do.call(rbind, customer_list) |>
+  mutate(first_order_date = as.Date(first_order_date),
+         sales_amount = ifelse(customer_type == "prospekt", 0, sales_amount))
+
+# Convert date to character for JSON serialization in JavaScript
+customers$label <- paste0("Zákaznícke ID: ", customers$customer_id, "; ", "typ: ", customers$customer_type)
+customers$marker_color <- ifelse(customers$customer_type == "interný",
+  "#D3AF37",
+  ifelse(customers$customer_type == "akvírovaný",
+    "#3D729E",
+    "#C4A484"
+  )
+)
+```
+
+```{r, shared-data}
+#| label: shared-data
+#| echo: false
+#| eval: true
+#| warning: false
+#| output: false
+
+# Create SharedData object
+sd_customers <- SharedData$new(customers, key = ~customer_id)
+```
+
+#
+
+## Filters {.sidebar}
+
+```{r, filter-reps}
+filter_checkbox("specialist_filter", "Predajca", sd_customers, ~specialist)
+```
+
+```{r, filter-type}
+filter_checkbox("customer_type_filter", "Typ zákazníka", sd_customers, ~customer_type)
+```
+
+## Body column
+
+### KPI row {height="15%"}
+
+```{r, valuebox-rate}
+#| content: valuebox
+#| title: "Konverzný pomer"
+#| icon: check2-square
+#| color: "#29d8d8"
+#| expandable: false
+
+htmltools::browsable(summarywidget(
+  sd_customers,
+  statistic = "count_rate",
+  numerator_selection = ~ customer_type %in% c("interný", "akvírovaný"),
+  digits = 1
+))
+```
+
+```{r, valuebox-count}
+#| content: valuebox
+#| title: "Noví zákazníci"
+#| icon: person-plus-fill
+#| color: "#29d8d8"
+#| expandable: false
+
+htmltools::browsable(summarywidget(
+  sd_customers,
+  statistic = "distinct_count",
+  selection = ~ first_order_date >= twelve_months_ago
+))
+```
+
+```{r, valuebox-sum}
+#| content: valuebox
+#| title: "Predaje"
+#| icon: cash
+#| color: "#29d8d8"
+#| expandable: false
+
+htmltools::browsable(summarywidget(
+  sd_customers,
+  statistic = "sum",
+  column = "sales_amount",
+  suffix = " €"
+))
+```
+### Body row {height="85%"}
+
+#### Map {width="50%"}
+
+```{r, map}
+#| title: Rozmiestnenie zákazníkov
+# Leaflet map with crosstalk
+
+leaflet(sd_customers) |>
+  addTiles() |>
+  # addProviderTiles("Stadia.AlidadeSmooth") |>
+  addPolygons(
+    data = slovak_districts,
+    fillColor = ~ pal_specialist(specialist),
+    color = "black",
+    weight = 0.5,
+    opacity = 0.1,
+    fillOpacity = 0.4,
+    label = ~label
+  ) |>
+  addLegend(
+    "bottomright",
+    colors = c("#D3AF37", "#3D729E", "#C4A484"),
+    labels = c("Interný", "akvírovaný", "prospekt"),
+    title = "Customer Type",
+    opacity = 1
+  ) |>
+  setView(lng = mean(slovak_districts$long), lat = mean(slovak_districts$lat), zoom = 7) |>
+  addCircles(
+    data = sd_customers,
+    lng = ~lng,
+    lat = ~lat,
+    color = ~marker_color,
+    label = ~label,
+    opacity = 1,
+    radius = 20,
+    weight = 10
+    # group = "customers"
+  )
+```
+
+
+#### Table {width="50%"}
+```{r, table}
+#| title: Zoznam zákazníkov
+#| expandable: false
+
+datatable(
+  sd_customers,
+  extensions = c("Buttons", "FixedColumns"),
+  rownames = FALSE,
+  filter = "top",
+  options = list(
+    initComplete = JS(
+      "function(settings, json) {",
+      "$('body').css({'font-size': '12px', 'font-family': 'Arial'});",
+      "}"
+    ),
+    columnDefs = list(list(
+      visible = FALSE,
+      targets = c(6:9)
+    )),
+    pageLength = 20,
+    scrollY = "500px",
+    dom = "Blrtp",
+    deferRender = TRUE,
+    buttons = c("excel", "csv"),
+    autoWidth = FALSE
+  ),
+  colnames = c("Zákazník", "Obchodník", "Okres", "Typ", "Prvá objednávka", "Predaj"),
+) |>
+  formatCurrency(
+    columns = 6,
+    digits = 0,
+    interval = 3,
+    mark = " ",
+    currency = " €",
+    before = FALSE
+  ) |>
+  formatStyle(columns = c(1:6), fontSize = "12px")
+
+# https://stackoverflow.com/questions/39775563/why-is-the-vertical-scroll-here-not-working
+```

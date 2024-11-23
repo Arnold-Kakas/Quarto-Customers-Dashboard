@@ -1,0 +1,15 @@
+project:
+  type: website
+
+webiste:
+  title: "Zákaznícky Dashboard"
+  sidebar: 
+    contents:
+      - href: quarto_dashboard.qmd
+        text: Dashboard
+      
+format:
+  html: 
+    theme: [flatly, custom.scss]
+    toc: true
+    
