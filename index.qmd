@@ -124,7 +124,8 @@ for (spec in specialists) {
 }
 
 customers <- do.call(rbind, customer_list) |>
-  mutate(first_order_date = as.Date(first_order_date),
+  mutate(first_order_date = ifelse(customer_type == "prospekt", NA, first_order_date),
+         first_order_date = as.Date(first_order_date),
          sales_amount = ifelse(customer_type == "prospekt", 0, sales_amount))
 
 # Convert date to character for JSON serialization in JavaScript
