@@ -7,6 +7,9 @@ format:
         text: |
           <link rel="icon" type="image/x-icon" href="data/static/dashboard.ico">
           <link href='https://fonts.googleapis.com/css?family=Maven Pro' rel='stylesheet'>
+      theme:
+        - flatly
+        - custom.scss
 ---
 
 ```{r, load-packages}
