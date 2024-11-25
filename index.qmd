@@ -170,7 +170,7 @@ filter_checkbox("customer_type_filter", "Typ zákazníka", sd_customers, ~custom
 #| content: valuebox
 #| title: "Konverzný pomer"
 #| icon: check2-square
-#| color: "#29d8d8"
+#| color: "#a6d5e0"
 #| expandable: false
 
 htmltools::browsable(summarywidget(
@@ -185,7 +185,7 @@ htmltools::browsable(summarywidget(
 #| content: valuebox
 #| title: "Noví zákazníci"
 #| icon: person-plus-fill
-#| color: "#29d8d8"
+#| color: "#a6d5e0"
 #| expandable: false
 
 htmltools::browsable(summarywidget(
@@ -199,7 +199,7 @@ htmltools::browsable(summarywidget(
 #| content: valuebox
 #| title: "Predaje"
 #| icon: cash
-#| color: "#29d8d8"
+#| color: "#a6d5e0"
 #| expandable: false
 
 htmltools::browsable(summarywidget(
