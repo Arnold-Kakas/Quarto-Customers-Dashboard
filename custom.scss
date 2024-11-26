@@ -3,9 +3,9 @@
 * {
     font-family: 'Maven Pro' !important;
   }
-  
+ 
 #dashboard-collapse {
-  display: none !important;
+  font-size: large !important;
 }
 
 .navbar-brand-container {
@@ -16,10 +16,12 @@
     font-size: xx-large !important;
 }
 
+/*  
 #quarto-dashboard-header > nav > div {
   display: flex !important;
   flex-flow: row-reverse !important;
 }
+*/
 
 .quarto-dashboard .bslib-value-box .value-box-value {
     /* Adjust font size to smaller range */
