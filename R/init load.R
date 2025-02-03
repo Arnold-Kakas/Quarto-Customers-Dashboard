@@ -10,7 +10,7 @@ library(htmlwidgets)
 library(htmltools)
 library(janitor)
 library(purrr)
-library(summarywidget)
+library(kpiwidget)
 
 twelve_months_ago <- today() %m-% months(12)
 
@@ -28,13 +28,13 @@ set.seed(123)
 slovak_districts <- slovak_districts |>
   mutate(
     specialist = case_when(
-      substr(lau, 4, 4) == "1" ~ "Miloš",
-      substr(lau, 4, 4) == "2" ~ "Jana",
-      substr(lau, 4, 4) == "3" ~ "Jan",
-      substr(lau, 4, 4) == "4" ~ "Lenka",
+      substr(lau, 4, 4) == "1" ~ "Martin",
+      substr(lau, 4, 4) == "2" ~ "Julia",
+      substr(lau, 4, 4) == "3" ~ "Peter",
+      substr(lau, 4, 4) == "4" ~ "Anna",
       TRUE ~ NA_character_ # Default case if no match
     ),
-    label = paste0("Okres: ", name, "; ", "Obchodník: ", specialist)
+    label = paste0("District: ", name, "; ", "Sales rep.: ", specialist)
   )
 
 specialists <- unique(slovak_districts$specialist)
@@ -61,7 +61,7 @@ for (spec in specialists) {
     coords <- st_coordinates(st_centroid(points))
     
     # Create customer types
-    customer_types <- c("interný", "akvírovaný", "prospekt")
+    customer_types <- c("internal", "acquired", "prospect")
     
     # Randomly assign customer types
     cust_types <- sample(customer_types, num_customers, replace = TRUE)
@@ -95,15 +95,15 @@ for (spec in specialists) {
 }
 
 customers <- do.call(rbind, customer_list) |>
-  mutate(first_order_date = ifelse(customer_type == "prospekt", NA, first_order_date),
+  mutate(first_order_date = ifelse(customer_type == "prospect", NA, first_order_date),
          first_order_date = as_date(first_order_date),
-         sales_amount = ifelse(customer_type == "prospekt", 0, sales_amount))
+         sales_amount = ifelse(customer_type == "prospect", 0, sales_amount))
 
 # Convert date to character for JSON serialization in JavaScript
-customers$label <- paste0("Zákaznícke ID: ", customers$customer_id, "; ", "typ: ", customers$customer_type)
-customers$marker_color <- ifelse(customers$customer_type == "interný",
+customers$label <- paste0("Customer ID: ", customers$customer_id, "; ", "type: ", customers$customer_type)
+customers$marker_color <- ifelse(customers$customer_type == "internal",
                                  "#D3AF37",
-                                 ifelse(customers$customer_type == "akvírovaný",
+                                 ifelse(customers$customer_type == "acquired",
                                         "#3D729E",
                                         "#C4A484"
                                  )

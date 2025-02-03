@@ -1,5 +1,5 @@
 ---
-title: "Zákaznícky dashboard"
+title: "Customers dashboard"
 format:
   dashboard:
       nav-buttons:
@@ -33,11 +33,11 @@ source("R/init load.R")
 ## Filters {.sidebar}
 
 ```{r, filter-reps}
-filter_checkbox("specialist_filter", "Predajca", sd_customers, ~specialist)
+filter_checkbox("specialist_filter", "Sales rep.", sd_customers, ~specialist)
 ```
 
 ```{r, filter-type}
-filter_checkbox("customer_type_filter", "Typ zákazníka", sd_customers, ~customer_type)
+filter_checkbox("customer_type_filter", "Customer type", sd_customers, ~customer_type)
 ```
 
 ## Body column
@@ -46,41 +46,43 @@ filter_checkbox("customer_type_filter", "Typ zákazníka", sd_customers, ~custom
 
 ```{r, valuebox-rate}
 #| content: valuebox
-#| title: "Konverzný pomer"
+#| title: "Conversion rate"
 #| icon: check2-square
 #| color: "#a6d5e0"
 #| expandable: false
 
-htmltools::browsable(summarywidget(
+htmltools::browsable(kpiwidget(
   sd_customers,
-  statistic = "count_rate",
-  numerator_selection = ~ customer_type %in% c("interný", "akvírovaný"),
-  digits = 1
+  kpi = "count",
+  comparison = "share",
+  group1 = ~ customer_type %in% c("interný", "akvírovaný"),
+  digits = 1,
+  suffix = "%"
 ))
 ```
 
 ```{r, valuebox-count}
 #| content: valuebox
-#| title: "Noví zákazníci"
+#| title: "New Customers"
 #| icon: person-plus-fill
 #| color: "#a6d5e0"
 #| expandable: false
 
-htmltools::browsable(summarywidget(
+htmltools::browsable(kpiwidget(
   sd_customers,
-  statistic = "distinct_count",
+  statistic = "distinctCount",
   selection = ~ first_order_date >= twelve_months_ago
 ))
 ```
 
 ```{r, valuebox-sum}
 #| content: valuebox
-#| title: "Predaje"
+#| title: "Sales Amount"
 #| icon: cash
 #| color: "#a6d5e0"
 #| expandable: false
 
-htmltools::browsable(summarywidget(
+htmltools::browsable(kpiwidget(
   sd_customers,
   statistic = "sum",
   column = "sales_amount",
@@ -92,7 +94,7 @@ htmltools::browsable(summarywidget(
 #### Map {width="50%"}
 
 ```{r, map}
-#| title: Rozmiestnenie zákazníkov
+#| title: "Geographical distribution of customers"
 # Leaflet map with crosstalk
 
 leaflet(sd_customers) |>
@@ -131,7 +133,7 @@ leaflet(sd_customers) |>
 
 #### Table {width="50%"}
 ```{r, table}
-#| title: Zoznam zákazníkov
+#| title: "List of Customers"
 #| expandable: false
 
 datatable(
@@ -156,7 +158,7 @@ datatable(
     buttons = c("excel", "csv"),
     autoWidth = FALSE
   ),
-  colnames = c("Zákazník", "Obchodník", "Okres", "Typ", "Prvá objednávka", "Predaj"),
+  colnames = c("Customer", "Sales Rep.", "District", "Type", "First Order", "Sales Amount"),
 ) |>
   formatCurrency(
     columns = 6,
