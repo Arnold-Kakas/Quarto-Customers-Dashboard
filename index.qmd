@@ -55,8 +55,8 @@ htmltools::browsable(kpiwidget(
   sd_customers,
   kpi = "count",
   comparison = "share",
-  group1 = ~ customer_type %in% c("interný", "akvírovaný"),
-  digits = 1,
+  group1 = ~ customer_type %in% c("internal", "acquired"),
+  decimals = 1,
   suffix = "%"
 ))
 ```
@@ -70,8 +70,10 @@ htmltools::browsable(kpiwidget(
 
 htmltools::browsable(kpiwidget(
   sd_customers,
-  statistic = "distinctCount",
-  selection = ~ first_order_date >= twelve_months_ago
+  kpi = "distinctCount",
+  column = "customer_id",
+  selection = ~ first_order_date >= twelve_months_ago,
+  decimals = 0
 ))
 ```
 
@@ -84,9 +86,10 @@ htmltools::browsable(kpiwidget(
 
 htmltools::browsable(kpiwidget(
   sd_customers,
-  statistic = "sum",
+  kpi = "sum",
   column = "sales_amount",
-  suffix = " €"
+  suffix = " €",
+  decimals = 0
 ))
 ```
 ### Body row {height="85%"}
@@ -112,7 +115,7 @@ leaflet(sd_customers) |>
   addLegend(
     "bottomright",
     colors = c("#D3AF37", "#3D729E", "#C4A484"),
-    labels = c("Interný", "akvírovaný", "prospekt"),
+    labels = c("Internal", "Acquired", "Prospect"),
     title = "Customer Type",
     opacity = 1
   ) |>
