@@ -48,7 +48,9 @@ $navbar-bg: #a6d5e0;
   background-color: #a6d5e0 !important;
 }
 
-
+.value-box-showcase {
+justify-content: flex-start !important;
+}
 
 /* Sidebar fixed position and overlap */
 #bslib-sidebar-1 {
